@@ -1,0 +1,30 @@
+- name: Deploy application container
+  hosts: app
+  become: true
+
+  vars:
+    container_name: devops-sandbox-app
+    image_name: "{{ docker_image }}"
+    app_port: 3000
+
+  tasks:
+
+    - name: Pull Docker image
+      community.docker.docker_image:
+        name: "{{ image_name }}"
+        source: pull
+
+    - name: Stop existing container if running
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Run application container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ app_port }}:3000"

@@ -63,6 +63,17 @@ pipeline {
         '''
       }
     }
+
+    stage('Ansible Deploy') {
+      steps {
+        sh '''
+          ansible-playbook \
+            -i ansible/inventory \
+            ansible/deploy.yml \
+            --extra-vars "docker_image=${FULL_IMAGE}"
+        '''
+      }
+    }
   }
 
   post {
