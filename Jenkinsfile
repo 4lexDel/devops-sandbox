@@ -5,6 +5,11 @@ pipeline {
     timestamps()
   }
 
+  environment {
+    IMAGE_NAME = "devops-sandbox-app"
+    IMAGE_TAG  = "latest"
+  }
+
   stages {
 
     stage('Checkout') {
@@ -24,14 +29,24 @@ pipeline {
         sh 'npm test'
       }
     }
+
+    stage('Docker Build') {
+      steps {
+        sh '''
+          docker build \
+            -t ${IMAGE_NAME}:${IMAGE_TAG} \
+            .
+        '''
+      }
+    }
   }
 
   post {
     success {
-      echo 'CI pipeline succeeded ✅'
+      echo "Docker image ${IMAGE_NAME}:${IMAGE_TAG} built successfully ✅"
     }
     failure {
-      echo 'CI pipeline failed ❌'
+      echo "Pipeline failed ❌"
     }
   }
 }
