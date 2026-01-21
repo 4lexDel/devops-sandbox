@@ -3,6 +3,7 @@ pipeline {
 
   options {
     timestamps()
+    disableConcurrentBuilds()
   }
 
   environment {
@@ -13,6 +14,14 @@ pipeline {
   }
 
   stages {
+
+    stage('Info') {
+      steps {
+        echo "Branch        : ${env.BRANCH_NAME}"
+        echo "Commit        : ${env.GIT_COMMIT}"
+        echo "Docker image  : ${env.FULL_IMAGE}"
+      }
+    }
 
     stage('Checkout') {
       steps {
@@ -33,14 +42,22 @@ pipeline {
     }
 
     stage('Docker Build') {
+      when {
+        branch 'main'
+      }
       steps {
         sh '''
-          docker build -t ${FULL_IMAGE} .
+          docker build \
+            -t ${FULL_IMAGE} \
+            .
         '''
       }
     }
 
-    stage('Docker Login') {
+    stage('Docker Push') {
+      when {
+        branch 'main'
+      }
       steps {
         withCredentials([usernamePassword(
           credentialsId: 'dockerhub-creds',
@@ -51,20 +68,17 @@ pipeline {
             echo "$DOCKER_PASS" | docker login \
               -u "$DOCKER_USER" \
               --password-stdin
+
+            docker push ${FULL_IMAGE}
           '''
         }
       }
     }
 
-    stage('Docker Push') {
-      steps {
-        sh '''
-          docker push ${FULL_IMAGE}
-        '''
-      }
-    }
-
     stage('Ansible Deploy') {
+      when {
+        branch 'main'
+      }
       steps {
         sh '''
           ansible-playbook \
@@ -78,7 +92,11 @@ pipeline {
 
   post {
     success {
-      echo "Image pushed: ${FULL_IMAGE} 🚀"
+      echo "✅ Pipeline succeeded"
+      echo "🚀 Application deployed with image ${FULL_IMAGE}"
+    }
+    failure {
+      echo "❌ Pipeline failed"
     }
     always {
       sh 'docker logout || true'
